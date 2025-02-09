@@ -1,3 +1,4 @@
+# run.sh
 #!/bin/bash
 
 echo "🔧 Activating virtual environment..."
@@ -13,4 +14,4 @@ else
 fi
 
 echo "🤖 Running AI task agent..."
-python agent.py
+python src/runtime.py

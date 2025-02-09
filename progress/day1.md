@@ -1,0 +1,31 @@
+- **Local AI Task Agent Setup:**
+  - Built a local AI task agent using **LangChain** and **Ollama**.
+  - Configured a Python virtual environment to isolate dependencies.
+
+- **Installation & Run Scripts:**
+  - Created an `install.sh` script that:
+    - Installs system dependencies (Python3, pip, git, curl).
+    - Sets up the virtual environment.
+    - Installs required Python packages (langchain, ollama, gitpython, playwright, scrapy, doit, apscheduler, openai).
+    - Installs and configures Ollama and Playwright browsers.
+    - Configures Git settings using GitHub credentials.
+  - Created a `run.sh` script that:
+    - Activates the virtual environment.
+    - Starts the Ollama server.
+    - Runs the main `agent.py` script.
+
+- **Agent Functionality (agent.py):**
+  - **Repository Configuration:**
+    - Prompts the user for a GitHub repository URL if not already configured.
+    - Clones the repository to a folder in the user's `Documents` directory (Linux).
+    - Persists the repository configuration in a `config.ini` file (gitignored).
+  - **API Key Configuration:**
+    - Checks for the `OPENAI_API_KEY` environment variable.
+    - Prompts the user for the API key if not set and stores it in the `config.ini` file.
+  - **Code Generation & Git Integration:**
+    - Uses LangChain's ChatOpenAI to generate code.
+    - Saves generated code into the cloned repository.
+    - Commits and pushes the changes to GitHub using GitPython.
+  - **Web Research & Task Scheduling:**
+    - Uses Playwright (and Scrapy) for simple web research tasks.
+    - Schedules code generation and web research tasks using APScheduler.

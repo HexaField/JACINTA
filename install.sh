@@ -14,7 +14,12 @@ source ai-agent-env/bin/activate
 
 echo "📜 Installing Python dependencies..."
 pip install --upgrade pip
-pip install langchain langchain-community ollama gitpython playwright scrapy doit apscheduler
+
+# runtime dependencies
+pip install langchain langchain-community ollama gitpython playwright scrapy doit apscheduler openai
+
+# server dependencies
+pip install fastapi uvicorn typer[all] requests
 
 echo "🦙 Installing Ollama..."
 curl -fsSL https://ollama.ai/install.sh | sh
