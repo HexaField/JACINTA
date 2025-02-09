@@ -8,7 +8,6 @@ from db import SessionLocal, TaskModel
 app = typer.Typer()
 
 def get_tasks_by_status(status: str):
-    """Retrieve tasks from the database filtered by status."""
     db = SessionLocal()
     try:
         tasks = db.query(TaskModel).filter(TaskModel.status == status).all()
@@ -29,21 +28,22 @@ def list_tasks(status: str):
         typer.echo("No tasks found.")
     else:
         for task in tasks:
-            typer.echo(f"{task.id}: {task.title} [{task.status}]")
+            typer.echo(f"{task.id}: {task.title} [{task.status}] - {task.description}")
 
 @app.command("new")
 def new_task():
     """
-    Create a new task. Prompts for a task title.
+    Create a new task. Prompts for a task title and description.
     
     Example:
       jacinta new
     """
     title = typer.prompt("Enter task title")
+    description = typer.prompt("Enter task description")
     new_id = str(uuid.uuid4())
     db = SessionLocal()
     try:
-        task = TaskModel(id=new_id, title=title, status="pending")
+        task = TaskModel(id=new_id, title=title, description=description, status="pending")
         db.add(task)
         db.commit()
         typer.echo(f"Created task: {task.id} - {task.title}")

@@ -1,5 +1,5 @@
 # src/db.py
-from sqlalchemy import create_engine, Column, String, DateTime
+from sqlalchemy import create_engine, Column, String, DateTime, Text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 import datetime
@@ -24,6 +24,7 @@ class TaskModel(Base):
 
     id = Column(String, primary_key=True, index=True)
     title = Column(String, index=True)
+    description = Column(Text, default="")  # New description field
     status = Column(String, index=True)  # e.g., "pending", "current", "completed"
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)

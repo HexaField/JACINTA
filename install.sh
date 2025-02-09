@@ -16,7 +16,7 @@ echo "📜 Installing Python dependencies..."
 pip install --upgrade pip
 
 # agent dependencies
-pip install langchain langchain-community ollama gitpython playwright scrapy doit apscheduler openai
+pip install  -qU "langchain[openai]" ollama gitpython playwright scrapy doit apscheduler openai
 
 # server dependencies
 pip install fastapi uvicorn typer[all] requests sqlalchemy

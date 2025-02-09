@@ -8,21 +8,6 @@ import uuid
 
 from config import get_config
 
-from langchain.chat_models import ChatOpenAI
-from apscheduler.schedulers.background import BackgroundScheduler
-from playwright.sync_api import sync_playwright
-
-# --- Import FastAPI components ---
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
-import uvicorn
-
-# --- Import the database module ---
-from db import SessionLocal, TaskModel, init_db
-
-# Initialize the database (creates tasks.db and tables if they don’t exist)
-init_db()
-
 # --- Load configuration ---
 cfg = get_config()
 repo_url = cfg["repo_url"]
@@ -45,11 +30,26 @@ else:
 # --- Load the repository using GitPython ---
 repo = git.Repo(local_repo_path)
 
-# --- Initialize scheduler and LangChain ---
+# --- Initialize scheduler ---
+from apscheduler.schedulers.background import BackgroundScheduler
 scheduler = BackgroundScheduler()
-llm = ChatOpenAI(openai_api_key=openai_api_key, model_name="llama3", temperature=0.7)
+
+# --- Initialize the new ChatGPT 4o mini model ---
+if not os.environ.get("OPENAI_API_KEY"):
+    os.environ["OPENAI_API_KEY"] = openai_api_key
+
+from langchain.chat_models import init_chat_model
+model = init_chat_model("gpt-4o-mini", model_provider="openai")
 
 # --- FastAPI server for task management ---
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+import uvicorn
+
+# Import database initialization (if using persistent tasks)
+from db import SessionLocal, TaskModel, init_db
+init_db()
+
 app = FastAPI()
 
 # Pydantic model for FastAPI requests/responses
@@ -105,13 +105,19 @@ def start_api_server():
 api_thread = threading.Thread(target=start_api_server, daemon=True)
 api_thread.start()
 
-# --- Agent functions remain unchanged ---
+# --- Agent functions ---
 def generate_code():
+    """
+    Generate Python code using the new model and save it into the repository.
+    """
     prompt_text = "Write a Python script that prints 'Hello, AI world!'"
-    response = llm.predict(prompt_text)
+    # Use the new interface to send a message:
+    response = model.invoke(prompt_text)
+    
     file_path = os.path.join(local_repo_path, "generated_script.py")
     with open(file_path, "w") as f:
         f.write(response)
+    
     print("✅ Code generated:", file_path)
     commit_and_push(file_path)
 
@@ -131,12 +137,45 @@ def research_web():
         print("📰 Found headlines:", headlines[:5])
         browser.close()
 
+# --- NEW: Process pending tasks ---
+def process_pending_tasks():
+    """Process tasks with status 'pending' by sending their description as a prompt to the LLM."""
+    db = SessionLocal()
+    try:
+        pending_tasks = db.query(TaskModel).filter(TaskModel.status == "pending").all()
+        for task in pending_tasks:
+            print(f"Processing task {task.id}: {task.title}")
+            # Mark the task as "current" so it is not processed again concurrently.
+            task.status = "current"
+            db.commit()  # Commit status update
+
+            # Use the task description as the prompt for the LLM
+            try:
+                result = model.invoke(task.description)
+                print(f"Task {task.id} processed. Result:\n{result}")
+            except Exception as e:
+                print(f"Error processing task {task.id}: {e}")
+                # Optionally, you might want to revert the status or mark it as failed
+                task.status = "pending"
+                db.commit()
+                continue
+
+            # Mark the task as completed
+            task.status = "completed"
+            db.commit()
+    finally:
+        db.close()
+
+# --- Update the scheduler function to include our new task processing job ---
 def schedule_tasks():
+    process_pending_tasks()  # Process any pending tasks immediately on startup
     scheduler.add_job(generate_code, "interval", hours=2)
     scheduler.add_job(research_web, "interval", hours=4)
+    scheduler.add_job(process_pending_tasks, "interval", seconds=60)
     scheduler.start()
     print("📅 Task scheduler started.")
 
+# --- Main function remains the same ---
 def main():
     print("🤖 JACINTA AI Task Agent Runtime Starting...")
     schedule_tasks()
