@@ -1,31 +1,42 @@
-- **Local AI Task Agent Setup:**
-  - Built a local AI task agent using **LangChain** and **Ollama**.
-  - Configured a Python virtual environment to isolate dependencies.
-
-- **Installation & Run Scripts:**
-  - Created an `install.sh` script that:
-    - Installs system dependencies (Python3, pip, git, curl).
-    - Sets up the virtual environment.
-    - Installs required Python packages (langchain, ollama, gitpython, playwright, scrapy, doit, apscheduler, openai).
-    - Installs and configures Ollama and Playwright browsers.
-    - Configures Git settings using GitHub credentials.
-  - Created a `run.sh` script that:
-    - Activates the virtual environment.
-    - Starts the Ollama server.
-    - Runs the main `agent.py` script.
-
-- **Agent Functionality (agent.py):**
-  - **Repository Configuration:**
-    - Prompts the user for a GitHub repository URL if not already configured.
-    - Clones the repository to a folder in the user's `Documents` directory (Linux).
-    - Persists the repository configuration in a `config.ini` file (gitignored).
-  - **API Key Configuration:**
-    - Checks for the `OPENAI_API_KEY` environment variable.
-    - Prompts the user for the API key if not set and stores it in the `config.ini` file.
-  - **Code Generation & Git Integration:**
-    - Uses LangChain's ChatOpenAI to generate code.
-    - Saves generated code into the cloned repository.
-    - Commits and pushes the changes to GitHub using GitPython.
-  - **Web Research & Task Scheduling:**
-    - Uses Playwright (and Scrapy) for simple web research tasks.
-    - Schedules code generation and web research tasks using APScheduler.
+- **Project Title:** JACINTA (Joint Autonomous Coding, Inference, and Notary Task Agent)
+- **Architecture & Components:**
+  - **Persistent Background Process:**
+    - Runs continuously as a background service.
+    - Exposes a FastAPI server for task management.
+  - **Task Management & Persistence:**
+    - Uses SQLite with SQLAlchemy to store tasks persistently.
+    - Tasks include a title, description, and status ("pending", "current", "completed").
+  - **CLI Interface:**
+    - Built with Typer to support commands such as:
+      - `jacinta list completed`
+      - `jacinta list current`
+      - `jacinta list pending`
+      - `jacinta new`
+      - `jacinta cancel <task_id>`
+  - **Configuration Module (src/config.py):**
+    - Loads and persists GitHub repository and API key configurations via a config.ini file.
+  - **Runtime Module (src/runtime.py):**
+    - Ensures the specified GitHub repository is cloned.
+    - Initializes the local model using LangChain.
+    - Integrates a local LLM via Ollama targeting deepseek r1’s smallest model.
+    - Contains agent functions for generating code, performing web research, and processing pending tasks.
+  - **Database Module (src/db.py):**
+    - Defines the task schema (including a description field) and initializes the SQLite database.
+- **Model Integration:**
+  - **Local LLM via Ollama:**
+    - Uses deepseek r1’s smallest model.
+    - Initialized through LangChain’s `init_chat_model` with `model_provider="ollama"`.
+    - Model is invoked with `model.invoke(prompt)`.
+- **Installation Script (install.sh):**
+  - Sets up system dependencies and a Python virtual environment.
+  - Installs required Python packages (including LangChain with OpenAI extras, Ollama, GitPython, Playwright, Scrapy, Doit, APScheduler, FastAPI, Uvicorn, Typer, Requests, SQLAlchemy).
+  - Checks if Ollama is already installed and skips re-installation if it is.
+  - Pulls deepseek r1’s smallest model via Ollama.
+- **Task Processing:**
+  - Scheduled jobs process pending tasks by:
+    - Marking tasks as "current".
+    - Sending task descriptions as prompts to the model.
+    - Updating task statuses to "completed" upon successful processing.
+- **Future Directions:**
+  - Expand task-specific functionalities and integrate additional processing logic.
+  - Enhance CLI commands and improve overall system robustness.

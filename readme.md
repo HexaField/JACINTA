@@ -31,3 +31,10 @@ Progress notes summarised in ./progress
 
 ### Cancel a task (replace <task_id> with the actual task ID):
 `./src/cli.py cancel <task_id>`
+
+## Future
+
+- job system (like thinking, break down and iterate on parts of a task until it's provably achieved)
+- notary system (internal note taking system that can be exposed and edited by the user)
+- inference system (to help with task completion)
+- coding system (to help with task completion)
