@@ -1,11 +1,20 @@
 #!/usr/bin/env python3
 # src/cli.py
+
 import typer
-import requests
+import uuid
+from db import SessionLocal, TaskModel
 
 app = typer.Typer()
 
-BASE_URL = "http://127.0.0.1:8000"  # FastAPI server URL
+def get_tasks_by_status(status: str):
+    """Retrieve tasks from the database filtered by status."""
+    db = SessionLocal()
+    try:
+        tasks = db.query(TaskModel).filter(TaskModel.status == status).all()
+        return tasks
+    finally:
+        db.close()
 
 @app.command("list")
 def list_tasks(status: str):
@@ -15,16 +24,12 @@ def list_tasks(status: str):
     Example:
       jacinta list completed
     """
-    response = requests.get(f"{BASE_URL}/tasks", params={"status": status})
-    if response.ok:
-        tasks = response.json()
-        if not tasks:
-            typer.echo("No tasks found.")
-        else:
-            for t in tasks:
-                typer.echo(f"{t['id']}: {t['title']} [{t['status']}]")
+    tasks = get_tasks_by_status(status)
+    if not tasks:
+        typer.echo("No tasks found.")
     else:
-        typer.echo("Error fetching tasks.")
+        for task in tasks:
+            typer.echo(f"{task.id}: {task.title} [{task.status}]")
 
 @app.command("new")
 def new_task():
@@ -35,27 +40,35 @@ def new_task():
       jacinta new
     """
     title = typer.prompt("Enter task title")
-    data = {"id": "", "title": title, "status": "pending"}
-    response = requests.post(f"{BASE_URL}/tasks", json=data)
-    if response.ok:
-        task = response.json()
-        typer.echo(f"Created task: {task['id']} - {task['title']}")
-    else:
-        typer.echo("Error creating task.")
+    new_id = str(uuid.uuid4())
+    db = SessionLocal()
+    try:
+        task = TaskModel(id=new_id, title=title, status="pending")
+        db.add(task)
+        db.commit()
+        typer.echo(f"Created task: {task.id} - {task.title}")
+    finally:
+        db.close()
 
 @app.command("cancel")
 def cancel_task(task_id: str):
     """
-    Cancel a task by its ID.
+    Cancel (delete) a task by its ID.
     
     Example:
       jacinta cancel <task_id>
     """
-    response = requests.delete(f"{BASE_URL}/tasks/{task_id}")
-    if response.ok:
-        typer.echo(f"Cancelled task {task_id}")
-    else:
-        typer.echo("Error cancelling task. Ensure the task ID is correct.")
+    db = SessionLocal()
+    try:
+        task = db.query(TaskModel).filter(TaskModel.id == task_id).first()
+        if task:
+            db.delete(task)
+            db.commit()
+            typer.echo(f"Cancelled task {task_id}")
+        else:
+            typer.echo("Task not found.")
+    finally:
+        db.close()
 
 if __name__ == "__main__":
     app()

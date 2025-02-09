@@ -12,10 +12,16 @@ from langchain.chat_models import ChatOpenAI
 from apscheduler.schedulers.background import BackgroundScheduler
 from playwright.sync_api import sync_playwright
 
-# FastAPI imports
+# --- Import FastAPI components ---
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import uvicorn
+
+# --- Import the database module ---
+from db import SessionLocal, TaskModel, init_db
+
+# Initialize the database (creates tasks.db and tables if they don’t exist)
+init_db()
 
 # --- Load configuration ---
 cfg = get_config()
@@ -46,44 +52,60 @@ llm = ChatOpenAI(openai_api_key=openai_api_key, model_name="llama3", temperature
 # --- FastAPI server for task management ---
 app = FastAPI()
 
+# Pydantic model for FastAPI requests/responses
 class Task(BaseModel):
     id: str = ""
     title: str
     status: str  # "pending", "current", or "completed"
 
-# In-memory store for tasks
-tasks = []
-
 @app.get("/tasks")
 def list_tasks(status: str = None):
-    if status:
-        return [t for t in tasks if t["status"] == status]
-    return tasks
+    db = SessionLocal()
+    try:
+        if status:
+            tasks = db.query(TaskModel).filter(TaskModel.status == status).all()
+        else:
+            tasks = db.query(TaskModel).all()
+        # Return a simple dict representation for each task
+        return [{"id": t.id, "title": t.title, "status": t.status} for t in tasks]
+    finally:
+        db.close()
 
 @app.post("/tasks")
 def create_task(task: Task):
-    if not task.id:
-        task.id = str(uuid.uuid4())
-    tasks.append(task.dict())
-    return task
+    db = SessionLocal()
+    try:
+        # If no ID was provided, generate one
+        task_id = task.id if task.id else str(uuid.uuid4())
+        new_task = TaskModel(id=task_id, title=task.title, status=task.status)
+        db.add(new_task)
+        db.commit()
+        db.refresh(new_task)
+        return {"id": new_task.id, "title": new_task.title, "status": new_task.status}
+    finally:
+        db.close()
 
 @app.delete("/tasks/{task_id}")
 def cancel_task(task_id: str):
-    global tasks
-    for t in tasks:
-        if t["id"] == task_id:
-            tasks.remove(t)
+    db = SessionLocal()
+    try:
+        task = db.query(TaskModel).filter(TaskModel.id == task_id).first()
+        if task:
+            db.delete(task)
+            db.commit()
             return {"message": f"Task {task_id} cancelled"}
-    raise HTTPException(status_code=404, detail="Task not found")
+        raise HTTPException(status_code=404, detail="Task not found")
+    finally:
+        db.close()
 
 def start_api_server():
     uvicorn.run(app, host="127.0.0.1", port=8000, log_level="info")
 
-# Start the FastAPI server in a daemon thread
+# Start the FastAPI server in a separate daemon thread
 api_thread = threading.Thread(target=start_api_server, daemon=True)
 api_thread.start()
 
-# --- Agent functions ---
+# --- Agent functions remain unchanged ---
 def generate_code():
     prompt_text = "Write a Python script that prints 'Hello, AI world!'"
     response = llm.predict(prompt_text)
@@ -118,7 +140,7 @@ def schedule_tasks():
 def main():
     print("🤖 JACINTA AI Task Agent Runtime Starting...")
     schedule_tasks()
-    # Keep the main process alive for scheduled jobs and the API server
+    # Keep the main process alive
     while True:
         time.sleep(60)
 

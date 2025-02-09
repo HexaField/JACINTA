@@ -2,3 +2,4 @@ ai-agent-env
 gui/node_modules
 config.ini
 __pycache__
+tasks.db
