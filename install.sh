@@ -14,7 +14,7 @@ source ai-agent-env/bin/activate
 
 echo "📜 Installing Python dependencies..."
 pip install --upgrade pip
-pip install langchain ollama gitpython playwright scrapy doit apscheduler
+pip install langchain langchain-community ollama gitpython playwright scrapy doit apscheduler
 
 echo "🦙 Installing Ollama..."
 curl -fsSL https://ollama.ai/install.sh | sh
@@ -34,5 +34,13 @@ git config --global user.email "$GITHUB_USER@users.noreply.github.com"
 echo "💾 Saving GitHub token..."
 export GITHUB_TOKEN
 echo "export GITHUB_TOKEN=$GITHUB_TOKEN" >> ~/.bashrc
+
+echo "⚡ Installing Bun, Vite, and Electron..."
+curl -fsSL https://bun.sh/install | bash
+export PATH="$HOME/.bun/bin:$PATH"
+bun create vite gui --template react-ts
+cd gui
+bun install
+cd ..
 
 echo "✅ Installation complete! Run ./run.sh to start the agent."
