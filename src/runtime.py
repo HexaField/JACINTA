@@ -39,7 +39,9 @@ if not os.environ.get("OPENAI_API_KEY"):
     os.environ["OPENAI_API_KEY"] = openai_api_key
 
 from langchain.chat_models import init_chat_model
-model = init_chat_model("gpt-4o-mini", model_provider="openai")
+# @todo expose the model provider as a configuration option
+# model = init_chat_model("gpt-4o-mini", model_provider="openai")
+model = init_chat_model("deepseek-r1:1.5b", model_provider="ollama")
 
 # --- FastAPI server for task management ---
 from fastapi import FastAPI, HTTPException
@@ -129,6 +131,7 @@ def commit_and_push(file_path):
     print("🚀 Pushed changes to GitHub.")
 
 def research_web():
+    from playwright.sync_api import sync_playwright  # Ensure import here if not at top
     with sync_playwright() as p:
         browser = p.chromium.launch()
         page = browser.new_page()
@@ -143,6 +146,9 @@ def process_pending_tasks():
     db = SessionLocal()
     try:
         pending_tasks = db.query(TaskModel).filter(TaskModel.status == "pending").all()
+        if not pending_tasks:
+            print("No pending tasks to process.")
+            return
         for task in pending_tasks:
             print(f"Processing task {task.id}: {task.title}")
             # Mark the task as "current" so it is not processed again concurrently.
@@ -155,7 +161,7 @@ def process_pending_tasks():
                 print(f"Task {task.id} processed. Result:\n{result}")
             except Exception as e:
                 print(f"Error processing task {task.id}: {e}")
-                # Optionally, you might want to revert the status or mark it as failed
+                # Optionally, revert the status or mark it as failed
                 task.status = "pending"
                 db.commit()
                 continue
@@ -185,3 +191,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

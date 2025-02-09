@@ -21,31 +21,45 @@ pip install  -qU "langchain[openai]" ollama gitpython playwright scrapy doit aps
 # server dependencies
 pip install fastapi uvicorn typer[all] requests sqlalchemy
 
-echo "🦙 Installing Ollama..."
-curl -fsSL https://ollama.ai/install.sh | sh
+# --- Check if Ollama is already installed ---
+if command -v ollama >/dev/null 2>&1; then
+    echo "🦙 Ollama is already installed. Skipping installation."
+else
+    echo "🦙 Installing Ollama..."
+    curl -fsSL https://ollama.ai/install.sh | sh
+fi
 
-echo "📡 Installing Playwright browsers..."
-playwright install
+ollama pull deepseek-r1:1.5b
 
-echo "🔗 Configuring GitHub..."
-echo "Enter your GitHub username:"
-read GITHUB_USER
-echo "Enter your GitHub personal access token:"
-read -s GITHUB_TOKEN
+# --- Check if Playwright is already installed ---
+if command -v playwright >/dev/null 2>&1; then
+    echo "📡 Playwright is already installed. Skipping installation."
+else
+    echo "📡 Installing Playwright..."
+    npm install -g playwright
+fi
 
-git config --global user.name "$GITHUB_USER"
-git config --global user.email "$GITHUB_USER@users.noreply.github.com"
+# --- Check if github is already configured ---
+if git config --get user.name >/dev/null 2>&1; then
+    echo "🔗 GitHub is already configured. Skipping configuration."
+else
+    echo "🔗 Configuring GitHub..."
+    echo "Enter your GitHub username:"
+    read GITHUB_USER
+    echo "Enter your GitHub personal access token:"
+    read -s GITHUB_TOKEN
 
-echo "💾 Saving GitHub token..."
-export GITHUB_TOKEN
-echo "export GITHUB_TOKEN=$GITHUB_TOKEN" >> ~/.bashrc
+    git config --global user.name "$GITHUB_USER"
+    git config --global user.email "$GITHUB_USER@users.noreply.github.com"
 
-echo "⚡ Installing Bun, Vite, and Electron..."
-curl -fsSL https://bun.sh/install | bash
-export PATH="$HOME/.bun/bin:$PATH"
-bun create vite gui --template react-ts
+    echo "💾 Saving GitHub token..."
+    export GITHUB_TOKEN
+    echo "export GITHUB_TOKEN=$GITHUB_TOKEN" >> ~/.bashrc
+fi
+
+echo "⚡ Installing GUI..."
 cd gui
-bun install
+npm install
 cd ..
 
 echo "✅ Installation complete! Run ./run.sh to start the agent."
