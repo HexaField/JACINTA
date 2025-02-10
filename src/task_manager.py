@@ -52,7 +52,8 @@ prompt = ChatPromptTemplate.from_messages(
             "- 'ask_user' (for requesting input from the user)\n\n"
             "Do NOT use any other types. Each step must be clear and actionable. "
             "Only prompt the user if there is uncertainty about how to complete the task, not for implementation details. "
-            "Only research if there is specific information required to complete the task that is not available and that the user does not need to give.\n")
+            "Only research if there is specific information required to complete the task that is not available and that the user does not need to give. "
+            "The jobs must be a complete solution to the task.")
         ),
         ("human", "{task_description}"),
     ]

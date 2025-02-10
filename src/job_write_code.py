@@ -29,8 +29,7 @@ code_prompt = ChatPromptTemplate.from_messages(
              "- Provide a valid filename with an appropriate extension (e.g., `.py`, `.js`, `.cpp`).\n"
              "- Include only the required code, no explanations.\n"
              "- Use best practices for the specified language.\n"
-             "- Assume dependencies should be standard unless otherwise specified.\n\n"
-             "Input: {description}")
+             "- Assume dependencies should be standard unless otherwise specified.\n\n")
         ),
         ("human", "{description}"),
     ]
@@ -48,11 +47,19 @@ def execute_code_job(job):
     """Executes a 'code' job by generating, saving, and committing code to GitHub."""
     structured_code_model = model.with_structured_output(CodeOutput, method="json_schema")
 
+    chain = code_prompt | structured_code_model
+
     print(f"💻 Generating code for: {job['description']}")
-    response = structured_code_model.invoke(job["description"])
+    response = chain.invoke(
+        {
+            "description": job['description']
+        }
+    )
 
     filename = response.filename
     code = response.code
+
+    print(code)
 
     # Validate filename
     if not filename or "." not in filename:
