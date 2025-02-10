@@ -6,6 +6,8 @@ Co-created by ChatGPT 4o Mini
 
 Progress notes summarised in ./progress
 
+I'm probably not going to finish it - I'm sure there are better ones out there.
+
 # Running the agent
 
 ## Installation
@@ -36,13 +38,13 @@ Progress notes summarised in ./progress
 
 `./src/cli.py cancel <task_id>`
 
-## Future
+## Roadmap
 
-- job system (like thinking, break down and iterate on parts of a task until it's provably achieved)
-  - use langchain chain of reasoning to break down tasks
-- notary system (internal note taking system that can be exposed and edited by the user)
-- inference system (to help with task completion)
-- coding system (writes, verifies, tests, runs, and commits code)
-- github PR system (to automate PRs)
-- connect GUI to CLI
-- whisper API (or local alternative) for STT and TTS
+- [x] job system (like thinking, break down and iterate on parts of a task until it's provably achieved)
+  - [ ]use langchain chain of reasoning to break down tasks
+- [ ] notary system (internal note taking system that can be exposed and edited by the user)
+- [ ] inference system (to help with task completion)
+- [ ] coding system (writes, verifies, tests, runs, and commits code)
+- [ ] github PR system (to automate PRs)
+- [ ] connect GUI to CLI
+- [ ] whisper API (or local alternative) for STT and TTS
