@@ -109,15 +109,17 @@ def process_pending_tasks():
                 print(f"Executing job: {job['description']} ({job['type']})")
 
                 if job["type"] == "research":
-                    research_result = research_web(job["description"])
-                    job["result"] = research_result
+                    # research_result = research_web(job["description"])
+                    # job["result"] = research_result
+                    print("TODO - implement researching")
 
                 elif job["type"] == "code":
                     job["result"] = execute_code_job(job)  # ✅ Call the function from job_write_code.py
 
                 elif job["type"] == "ask_user":
-                    user_response = input(f"User Input Required: {job['description']}\n> ")
-                    job["result"] = user_response
+                    # user_response = input(f"User Input Required: {job['description']}\n> ")
+                    # job["result"] = user_response
+                    print("TODO - implement user prompts")
 
                 else:
                     print(f"Unknown job type: {job['type']}")
