@@ -38,8 +38,10 @@ def new_task():
     Example:
       jacinta new
     """
-    title = typer.prompt("Enter task title")
-    description = typer.prompt("Enter task description")
+    title = "test"
+    description = "write a python script that prints 'hello world'"
+    # title = typer.prompt("Enter task title")
+    # description = typer.prompt("Enter task description")
     new_id = str(uuid.uuid4())
     db = SessionLocal()
     try:

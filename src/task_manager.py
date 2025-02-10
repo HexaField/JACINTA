@@ -7,14 +7,21 @@ from db import SessionLocal, TaskModel
 from langchain.chat_models import init_chat_model
 from playwright.sync_api import sync_playwright
 from typing import List
+from enum import Enum
+from job_write_code import execute_code_job  # Import the new module
 
 # Initialize the local model
 model = init_chat_model("deepseek-r1:1.5b", model_provider="ollama")
 
+class JobType(str, Enum):
+    RESEARCH = "research"
+    CODE = "code"
+    ASK_USER = "ask_user"
+
 # Pydantic model for jobs
 class Job(BaseModel):
     """Sub-task for completing a task."""
-    type: str = Field(description="Type of job (e.g., 'research', 'code', 'ask_user')")
+    type: JobType = Field(description="Type of job. Must be 'research', 'code', or 'ask_user'.")
     description: str = Field(description="A detailed description of what needs to be done")
     completed: bool = Field(default=False, description="Whether the job is completed")
     result: str = Field(default="", description="Result of the job (if any)")
@@ -37,13 +44,19 @@ prompt = ChatPromptTemplate.from_messages(
     [
         (
             "system",
-            "You are an expert AI agent that completes tasks by breaking them into actionable steps.",
+            ("You are an expert AI agent that completes tasks by breaking them into actionable steps.\n"
+            "Break this task into multiple steps. Each step must have a valid 'type'.\n\n"
+            "Valid types are:\n"
+            "- 'research' (for searching the internet for information)\n"
+            "- 'code' (for writing or modifying code in any programming language)\n"
+            "- 'ask_user' (for requesting input from the user)\n\n"
+            "Do NOT use any other types. Each step must be clear and actionable. "
+            "Only prompt the user if there is uncertainty about how to complete the task, not for implementation details. "
+            "Only research if there is specific information required to complete the task that is not available and that the user does not need to give.\n")
         ),
-        ("human", "Given the task: {task_description}, generate a list of steps to complete it."),
+        ("human", "{task_description}"),
     ]
 )
-
-from typing import List  # Import explicitly
 
 def process_pending_tasks():
     """Process pending tasks by breaking them into jobs and executing them."""
@@ -66,26 +79,29 @@ def process_pending_tasks():
             if not jobs:
                 print(f"Generating jobs for task {task.id}...")
 
-                # structured_llm = model.with_structured_output(list[Job], method="json_schema")
-                
-                # response = structured_llm.invoke(f"Break this task into multiple steps: {task.description}")
-                
-                # jobs = response.model_dump()  # Convert Pydantic object to dict
-                # task.set_jobs(jobs)
-                # db.commit()
-
                 structured_llm = model.with_structured_output(JobList, method="json_schema")
 
-                response = structured_llm.invoke(f"Break this task into multiple steps: {task.description}")
+                chain = prompt | structured_llm
 
-                jobsResponse = response.jobs  # Use `.jobs` instead of `.model_dump()`
-                task.set_jobs([job.dict() for job in jobsResponse])  # Convert to dict before storing
+                response = chain.invoke(
+                    {
+                        "task_description": task.description
+                    }
+                )
+                print(f"\nGenerated jobs for task {task.id}: ")
+                jobs = response.jobs
+                for job in jobs:
+                    if job.type not in {"research", "code", "ask_user"}:
+                        raise ValueError(f"Unexpected job type: {job.type}")  # Ensure type is valid
+                    print(f"- {job.type}: {job.description}")
+                task.set_jobs([job.dict() for job in jobs])
                 db.commit()
+                print("\n")
 
             jobs = task.get_jobs()
 
             # Process each job sequentially
-            for job in jobs:
+            for index, job in enumerate(jobs):  # Use index for direct modification
                 if job["completed"]:
                     continue  # Skip already completed jobs
 
@@ -96,20 +112,26 @@ def process_pending_tasks():
                     job["result"] = research_result
 
                 elif job["type"] == "code":
-                    code_result = model.invoke(f"Write a Python script for: {job['description']}")
-                    job["result"] = code_result
+                    job["result"] = execute_code_job(job)  # ✅ Call the function from job_write_code.py
 
                 elif job["type"] == "ask_user":
                     user_response = input(f"User Input Required: {job['description']}\n> ")
                     job["result"] = user_response
 
-                # Mark job as completed
-                job["completed"] = True
+                else:
+                    print(f"Unknown job type: {job['type']}")
+
+                # ✅ Only mark the specific job as completed
+                jobs[index]["completed"] = True  
                 task.set_jobs(jobs)
                 db.commit()
 
-            # If all jobs are complete, mark the task as completed
-            if all(j["completed"] for j in jobs):
+                # ✅ Save the updated job list back to the database
+                task.set_jobs(jobs)
+                db.commit()  # Commit after modifying only this job
+
+            # ✅ Now check if all jobs are actually completed before marking the task as completed
+            if all(job["completed"] for job in jobs):
                 task.status = "completed"
                 db.commit()
                 print(f"✅ Task {task.id} completed.")

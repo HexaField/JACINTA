@@ -8,7 +8,6 @@ import uuid
 
 from config import get_config
 from db import SessionLocal, TaskModel, init_db
-from task_manager import process_pending_tasks
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import uvicorn
@@ -38,6 +37,9 @@ repo = git.Repo(local_repo_path)
 # --- Initialize FastAPI ---
 init_db()
 app = FastAPI()
+
+# Once we have initialized everything, load our task manager
+from task_manager import process_pending_tasks
 
 # Pydantic model for API requests/responses
 class Task(BaseModel):
@@ -94,8 +96,7 @@ scheduler = BackgroundScheduler()
 
 def schedule_tasks():
     """Schedule task processing jobs."""
-    process_pending_tasks()  # Process any pending tasks immediately on startup
-    scheduler.add_job(process_pending_tasks, "interval", seconds=60)
+    scheduler.add_job(process_pending_tasks, "interval", seconds=10)
     scheduler.start()
     print("📅 Task scheduler started.")
 
